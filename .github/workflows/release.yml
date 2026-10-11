@@ -64,16 +64,16 @@ jobs:
 
       - name: Build
         # the program only (the solution also has a Store package project)
-        run: msbuild src/Winfile.vcxproj /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /flp:logfile=msbuild.log;verbosity=normal
+        run: msbuild src/Winfile.vcxproj /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} "/flp:logfile=msbuild.log;verbosity=normal"
 
       - name: Report build errors
         if: failure()
         shell: pwsh
         run: |
           if (Test-Path msbuild.log) {
-            Select-String -Path msbuild.log -Pattern ': (fatal )?error ' | Select-Object -First 20 | ForEach-Object {
-              Write-Host "::error::$($_.Line.Trim())"
-            }
+            $errs = Select-String -Path msbuild.log -Pattern '(fatal )?error [A-Z]+[0-9]+' | Select-Object -First 20
+            if (-not $errs) { $errs = Get-Content msbuild.log -Tail 15 | ForEach-Object { [pscustomobject]@{ Line = $_ } } }
+            $errs | ForEach-Object { Write-Host "::error::$($_.Line.Trim())" }
           }
 
       - name: Collect
