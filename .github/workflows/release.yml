@@ -23,7 +23,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Visual Studio 2022 (v143 toolset, which the project files use)
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
@@ -62,7 +63,8 @@ jobs:
           "#define WF_UPDATE_REPO L`"${{ github.repository }}`"" | Set-Content src/wfupdate_repo.h
 
       - name: Build
-        run: msbuild Winfile.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:PlatformToolset=v143 /flp:logfile=msbuild.log;verbosity=normal
+        # the program only (the solution also has a Store package project)
+        run: msbuild src/Winfile.vcxproj /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /flp:logfile=msbuild.log;verbosity=normal
 
       - name: Report build errors
         if: failure()
