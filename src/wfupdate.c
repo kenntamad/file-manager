@@ -635,6 +635,152 @@ PickAsset(const char* pRelease, PUPDATEINFO pInfo)
    }
 }
 
+//
+// GET pszUrl without following redirects. Returns the HTTP status (0 on a
+// network error) and the Location header, if any.
+//
+static DWORD
+HttpGetLocation(HINTERNET hSession, LPCWSTR pszUrl, LPWSTR pszLocation, DWORD cchLocation)
+{
+   URL_COMPONENTS uc;
+   WCHAR szHost[256];
+   WCHAR szPath[2048];
+   HINTERNET hConnect = NULL, hRequest = NULL;
+   DWORD dwStatus = 0, cbStatus = sizeof(dwStatus);
+   DWORD dwOption = WINHTTP_DISABLE_REDIRECTS;
+   DWORD cbLocation = cchLocation * sizeof(WCHAR);
+
+   pszLocation[0] = CHAR_NULL;
+
+   ZeroMemory(&uc, sizeof(uc));
+   uc.dwStructSize = sizeof(uc);
+   uc.lpszHostName = szHost;
+   uc.dwHostNameLength = COUNTOF(szHost);
+   uc.lpszUrlPath = szPath;
+   uc.dwUrlPathLength = COUNTOF(szPath);
+
+   if (!WinHttpCrackUrl(pszUrl, 0, 0, &uc) || uc.nScheme != INTERNET_SCHEME_HTTPS)
+      return 0;
+
+   hConnect = WinHttpConnect(hSession, szHost, uc.nPort, 0);
+   if (hConnect)
+      hRequest = WinHttpOpenRequest(hConnect, L"GET", szPath, NULL, WINHTTP_NO_REFERER,
+                                    WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+
+   if (hRequest &&
+       WinHttpSetOption(hRequest, WINHTTP_OPTION_DISABLE_FEATURE, &dwOption, sizeof(dwOption)) &&
+       WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
+       WinHttpReceiveResponse(hRequest, NULL) &&
+       WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                           WINHTTP_HEADER_NAME_BY_INDEX, &dwStatus, &cbStatus, WINHTTP_NO_HEADER_INDEX)) {
+
+      if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_LOCATION, WINHTTP_HEADER_NAME_BY_INDEX,
+                               pszLocation, &cbLocation, WINHTTP_NO_HEADER_INDEX))
+         pszLocation[0] = CHAR_NULL;
+   }
+
+   if (hRequest)
+      WinHttpCloseHandle(hRequest);
+   if (hConnect)
+      WinHttpCloseHandle(hConnect);
+
+   return dwStatus;
+}
+
+//
+// Fallback when the GitHub API refuses us (it allows 60 anonymous requests
+// an hour per IP address, which a shared/carrier-grade NAT address can use
+// up). The release web pages have no such limit:
+//   https://github.com/<repo>/releases/latest -> 302 .../releases/tag/<tag>
+//   https://github.com/<repo>/releases/download/<tag>/<asset>(.sha256)
+// Returns FALSE if the site could not be reached either.
+//
+static BOOL
+WebCheck(HINTERNET hSession, PUPDATEINFO pInfo)
+{
+   WCHAR szUrl[512];
+   WCHAR szLocation[1024];
+   WCHAR szAsset[64];
+   LPWSTR pTag;
+   DWORD dwStatus;
+   static const WCHAR szTagPart[] = L"/releases/tag/";
+
+   StringCchPrintf(szUrl, COUNTOF(szUrl), L"https://github.com/%s/releases/latest", pInfo->szRepo);
+   dwStatus = HttpGetLocation(hSession, szUrl, szLocation, COUNTOF(szLocation));
+
+   if (dwStatus == 404) {
+      pInfo->iStatus = UPD_NORELEASE;     // repository not found / private
+      return TRUE;
+   }
+
+   if (dwStatus < 300 || dwStatus >= 400 || !szLocation[0])
+      return FALSE;
+
+   pTag = StrStrIW(szLocation, szTagPart);
+   if (!pTag) {
+      pInfo->iStatus = UPD_NORELEASE;     // redirected to .../releases: none published
+      return TRUE;
+   }
+   pTag += COUNTOF(szTagPart) - 1;
+
+   StringCchCopy(pInfo->szTag, COUNTOF(pInfo->szTag), pTag);
+   StringCchCopy(pInfo->szReleaseUrl, COUNTOF(pInfo->szReleaseUrl), szLocation);
+
+   if (!ParseVersion(pInfo->szTag, pInfo->awLatest)) {
+      pInfo->iStatus = UPD_BADDATA;
+      return TRUE;
+   }
+
+   if (CompareVersion(pInfo->awLatest, pInfo->awCurrent) <= 0) {
+      pInfo->iStatus = UPD_UPTODATE;
+      return TRUE;
+   }
+
+   MultiByteToWideChar(CP_ACP, 0, szAssetArch, -1, szAsset, COUNTOF(szAsset));
+   StringCchPrintf(pInfo->szAssetUrl, COUNTOF(pInfo->szAssetUrl),
+                   L"https://github.com/%s/releases/download/%s/%s",
+                   pInfo->szRepo, pInfo->szTag, szAsset);
+   pInfo->cbAsset = 0;                    // not known without the API
+
+   //
+   // The release workflow publishes <asset>.sha256 next to each program.
+   // A release without one can't be verified, so don't offer it.
+   //
+   {
+      char* pBody = NULL;
+      WCHAR szHashUrl[2100];
+      WCHAR szHash[80];
+      INT i = 0;
+
+      StringCchPrintf(szHashUrl, COUNTOF(szHashUrl), L"%s.sha256", pInfo->szAssetUrl);
+      dwStatus = HttpGet(hSession, szHashUrl, NULL, NULL, &pBody, 4096, NULL);
+
+      if (dwStatus == 200 && pBody) {
+         const char* p = pBody;
+         while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')
+            p++;
+         lstrcpyW(szHash, L"sha256:");
+         for (i = 0; i < 64 && p[i]; i++)
+            szHash[7 + i] = (WCHAR)p[i];
+         szHash[7 + i] = CHAR_NULL;
+         pInfo->bHasDigest = ParseSha256Digest(szHash, pInfo->abSha256);
+      }
+
+      if (pBody)
+         LocalFree(pBody);
+
+      if (dwStatus == 404) {
+         pInfo->iStatus = UPD_NOASSET;    // no program for this computer
+         return TRUE;
+      }
+      if (!pInfo->bHasDigest)
+         return FALSE;
+   }
+
+   pInfo->iStatus = UPD_NEWER;
+   return TRUE;
+}
+
 static DWORD WINAPI
 UpdateCheckThread(LPVOID lpParam)
 {
@@ -668,14 +814,18 @@ UpdateCheckThread(LPVOID lpParam)
                       NULL, &pBody, 4 * 1024 * 1024, NULL);
    pInfo->dwError = GetLastError();
 
-   WinHttpCloseHandle(hSession);
-
    if (dwStatus == 404) {
       pInfo->iStatus = UPD_NORELEASE;
    } else if (dwStatus != 200 || !pBody) {
-      pInfo->iStatus = UPD_NETERROR;
-      if (dwStatus)
-         pInfo->dwError = dwStatus;     // HTTP status
+      //
+      // Rate limited (403/429), GitHub API trouble or blocked: try the
+      // release web pages instead.
+      //
+      if (!WebCheck(hSession, pInfo)) {
+         pInfo->iStatus = UPD_NETERROR;
+         if (dwStatus)
+            pInfo->dwError = dwStatus;     // HTTP status
+      }
    } else {
       const char* pRelease = JsonWs(pBody);
 
@@ -696,6 +846,8 @@ UpdateCheckThread(LPVOID lpParam)
          }
       }
    }
+
+   WinHttpCloseHandle(hSession);
 
 Done:
    if (pBody)

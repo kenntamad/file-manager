@@ -70,11 +70,14 @@ jobs:
           if (-not $exe) { throw 'winfile.exe not found' }
           New-Item -ItemType Directory -Force out | Out-Null
           Copy-Item $exe.FullName out/${{ matrix.asset }}
+          # checksum the updater verifies when the GitHub API is unavailable
+          $hash = (Get-FileHash out/${{ matrix.asset }} -Algorithm SHA256).Hash.ToLower()
+          Set-Content out/${{ matrix.asset }}.sha256 "$hash  ${{ matrix.asset }}" -NoNewline
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}
-          path: out/${{ matrix.asset }}
+          path: out/*
 
   release:
     needs: build
@@ -91,7 +94,7 @@ jobs:
           TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
         run: |
           ls -l dist
-          gh release create "$TAG" dist/*.exe \
+          gh release create "$TAG" dist/*.exe dist/*.sha256 \
             --repo "${{ github.repository }}" \
             --title "File Manager $TAG" \
             --generate-notes \
