@@ -145,6 +145,8 @@
 #define IDM_BOTH            413
 #define IDM_SPLIT           414
 
+#define IDM_FOLDERSIZES     416   /* View->Show Folder Sizes */
+
 #define IDM_ESCAPE          420
 
 #define IDM_OPTIONS         4
@@ -168,6 +170,8 @@
 #define IDM_INDEXONLAUNCH   514
 
 #define IDM_PREF            515
+
+#define IDM_AUTOUPDATE      516   /* Options->Check for Updates Automatically */
 
 #define IDM_SECURITY        5
 #define IDM_PERMISSIONS     605      // !! WARNING HARD CODED !!
@@ -198,6 +202,7 @@
 #define IDM_HELPPROCS       0x0021
 #define IDM_HELPHELP        1802
 #define IDM_ABOUT           1803
+#define IDM_CHECKUPDATE     1804  /* Help->Check for Updates... */
 
 #define IDM_DRIVELISTJUMP 2000  /* for defining an accelerator */
 

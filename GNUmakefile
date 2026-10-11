@@ -20,6 +20,7 @@ SRCS = \
 	src/wfdos.c \
 	src/wfdrives.c \
 	src/wfdrop.c \
+	src/wffoldersize.c \
 	src/wfext.c \
 	src/wffile.c \
 	src/wfinfo.c \
@@ -31,12 +32,13 @@ SRCS = \
 	src/wftree.c \
 	src/wfutil.c \
 	src/winfile.c \
+	src/wfupdate.c \
 	src/wnetcaps.c
 
 OBJS = $(subst .c,.o,$(SRCS)) src/wfgoto.o src/res.o
 
 CFLAGS = -DUNICODE -DFASTMOVE -DSTRSAFE_NO_DEPRECATE -DWINVER=0x0600
-LDLIBS = -mwindows -lkernel32 -lgdi32 -luser32 -ladvapi32 -lcomctl32 -lole32 -lshlwapi -lshell32 -loleaut32 -lversion
+LDLIBS = -mwindows -lkernel32 -lgdi32 -luser32 -ladvapi32 -lcomctl32 -lole32 -lshlwapi -lshell32 -loleaut32 -lversion -lwinhttp -lbcrypt
 TARGET = winfile
 ifeq ($(OS),Windows_NT)
 TARGET := $(TARGET).exe

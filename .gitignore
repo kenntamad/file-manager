@@ -285,3 +285,8 @@ __pycache__/
 Makefile.depends
 *.exe
 tags
+
+# build outputs
+*.o
+/winfile.exe
+/winfile

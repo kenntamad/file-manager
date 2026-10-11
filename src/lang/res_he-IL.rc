@@ -83,6 +83,8 @@ BEGIN
     MENUITEM    "מיין לפי תארי&ך",   IDM_BYDATE
     MENUITEM    "מיון לפי תאריך ה&עברה",   IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "הצג גדלי &תיקיות", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "לפי סוג &קובץ...",     IDM_VINCLUDE
     END
     POPUP       "&אפשרויות"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "&מזער בעת הפעלה",     IDM_MINONRUN
     MENUITEM    "צור מפתח Goto בעת ההפעלה", IDM_INDEXONLAUNCH
+    MENUITEM    "בדוק &עדכונים באופן אוטומטי", IDM_AUTOUPDATE
     MENUITEM    "&שמור הגדרות ביציאה",   IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "שמירת הגדרות &עכשיו",       IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "&חיפוש עזרה לגבי...",   IDM_HELPKEYS
     MENUITEM    "&כיצד להשתמש בעזרה",         IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "בדוק אם יש &עדכונים...", IDM_CHECKUPDATE
     MENUITEM    "&אודות מנהל הקבצים...",   IDM_ABOUT
     END
 

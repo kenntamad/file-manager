@@ -83,6 +83,8 @@ BEGIN
     MENUITEM    "Nach Datu&m",                                    IDM_BYDATE
     MENUITEM    "Nach Datum v&orwärts",                           IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "&Ordnergrößen anzeigen", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "Angaben aus&wählen...",                          IDM_VINCLUDE
     END
     POPUP       "&Optionen"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "&Symbol nach Programmstart",                     IDM_MINONRUN
     MENUITEM    "Beim Starten &Goto-Index erstellen",             IDM_INDEXONLAUNCH
+    MENUITEM    "Automatisch nach Upd&ates suchen", IDM_AUTOUPDATE
     MENUITEM    "&Einstellungen beim Beenden speichern",          IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "Einstellungen jetzt speicher&n",                 IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "&Suchen...",                                     IDM_HELPKEYS
     MENUITEM    "&Hilfe &verwenden",                              IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "Nach &Updates suchen...", IDM_CHECKUPDATE
     MENUITEM    "&Über Datei-Manager",                            IDM_ABOUT
     END
 END

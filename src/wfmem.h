@@ -53,6 +53,7 @@ typedef struct _XDTA {
 
    BYTE  byBitmap;
    BYTE  byType;
+   BYTE  bySizeState;      // FOLDERSIZE_* (directories only), see wffoldersize.h
 
    PDOCBUCKET pDocB;
 

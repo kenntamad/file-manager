@@ -83,6 +83,8 @@ BEGIN
     MENUITEM "日付で昇順に並び替え(&D)",   IDM_BYDATE
     MENUITEM "日付で降順に並び替え(&F)",   IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "フォルダー サイズを表示(&Z)", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "ファイル タイプで絞り込み(&T)...",     IDM_VINCLUDE
     END
     POPUP       "オプション(&O)"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "プログラムの起動時に最小化(&M)",     IDM_MINONRUN
     MENUITEM    "起動時に移動先インデックスを作成(&G)", IDM_INDEXONLAUNCH
+    MENUITEM    "更新を自動的に確認(&U)", IDM_AUTOUPDATE
     MENUITEM    "終了時に設定を保存(&E)",   IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "今すぐ設定を保存(&N)",       IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "ヘルプの検索(&S)...",   IDM_HELPKEYS
     MENUITEM    "ヘルプの使い方(&H)",         IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "更新の確認(&U)...", IDM_CHECKUPDATE
     MENUITEM    "ファイル マネージャーについて(&A)...",   IDM_ABOUT
     END
 

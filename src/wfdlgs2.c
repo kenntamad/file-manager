@@ -1280,6 +1280,7 @@ InitPropertiesDialog(
 
    LPTSTR lpszBuf;
    LARGE_INTEGER qSize, qCSize;
+   BOOL bDirSizeKnown = FALSE;
 
    LARGE_INTEGER_NULL(qSize);
    LARGE_INTEGER_NULL(qCSize);
@@ -1359,7 +1360,8 @@ InitPropertiesDialog(
          if (dwAttrib & ATTR_DIR && dwAttrib & ATTR_PARENT)
             continue;
 
-         qSize.QuadPart = qSize.QuadPart + (lpxdta->qFileSize).QuadPart;
+         qSize.QuadPart = qSize.QuadPart + FolderSizeOfItem(lpxdta);
+         bDirSizeKnown = FolderSizeIsKnown(lpxdta);
 
          if (!szName[0]) {
 
@@ -1428,8 +1430,32 @@ FullPath:
          if (LoadString(hAppInstance, IDS_DIRNAMELABEL, szTemp, COUNTOF(szTemp)))
             SetDlgItemText(hDlg, IDD_NAMELABEL, szTemp);
 
-         ShowWindow(GetDlgItem(hDlg, IDD_SIZELABEL), SW_HIDE);
-         ShowWindow(GetDlgItem(hDlg, IDD_SIZE), SW_HIDE);
+         if (bFolderSizes && !(dwAttribsOn & (ATTR_JUNCTION | ATTR_SYMBOLIC | ATTR_REPARSE_POINT)))
+         {
+            //
+            //  Show the total size of the folder's contents. Use the value
+            //  already computed for the directory window when there is one.
+            //
+            if (!bDirSizeKnown)
+            {
+               WCHAR szFull[MAXPATHLEN * 2];
+               HCURSOR hcurOld = SetCursor(LoadCursor(NULL, IDC_WAIT));
+
+               lstrcpy(szFull, szPath);
+               if (szName[0]) {
+                  AddBackslash(szFull);
+                  lstrcat(szFull, szName);
+               }
+
+               FolderSizeCompute(szFull, &qSize, NULL);
+               SetCursor(hcurOld);
+            }
+         }
+         else
+         {
+            ShowWindow(GetDlgItem(hDlg, IDD_SIZELABEL), SW_HIDE);
+            ShowWindow(GetDlgItem(hDlg, IDD_SIZE), SW_HIDE);
+         }
 
          ShowWindow(GetDlgItem(hDlg, IDD_CSIZELABEL), SW_HIDE);
          ShowWindow(GetDlgItem(hDlg, IDD_CSIZE), SW_HIDE);

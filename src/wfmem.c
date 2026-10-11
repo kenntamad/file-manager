@@ -197,6 +197,7 @@ MemAdd(
    lpLast->dwNextFree += cbSpace;
    lpxdta->dwSize = cbSpace;
    lpxdta->cchFileNameOffset = cchFileName+1;
+   lpxdta->bySizeState = 0;
 
    return lpxdta;
 }

@@ -58,7 +58,15 @@ WinMain(
    RegGetMachineIdentifierValue( &gdwMachineId );
 #endif // defined(JAPAN) && defined(i386)
 
-   if (!InitFileManager(hInst, pszNextComponent(pszCmdLine), nCmdShow)) {
+   pszCmdLine = pszNextComponent(pszCmdLine);
+
+   //
+   // A just-installed update is started with /wfupdated:<pid>; wait for
+   // the old version to exit and drop the switch.
+   //
+   UpdateHandleCommandLine(&pszCmdLine);
+
+   if (!InitFileManager(hInst, pszCmdLine, nCmdShow)) {
       FreeFileManager();
       return FALSE;
    }
@@ -441,6 +449,7 @@ InitPopupMenus(UINT uMenus, HMENU hMenu, HWND hwndActive)
       CheckMenuItem(hMenu, IDM_BYSIZE, (dwSort == IDD_SIZE) ? MF_CHECKED | MF_BYCOMMAND : MF_UNCHECKED | MF_BYCOMMAND);
       CheckMenuItem(hMenu, IDM_BYDATE, (dwSort == IDD_DATE) ? MF_CHECKED | MF_BYCOMMAND : MF_UNCHECKED | MF_BYCOMMAND);
       CheckMenuItem(hMenu, IDM_BYFDATE,(dwSort == IDD_FDATE) ? MF_CHECKED | MF_BYCOMMAND : MF_UNCHECKED | MF_BYCOMMAND);
+      CheckMenuItem(hMenu, IDM_FOLDERSIZES, bFolderSizes ? MF_CHECKED | MF_BYCOMMAND : MF_UNCHECKED | MF_BYCOMMAND);
 
       if (hwndActive == hwndSearch || hwndDir)
          uMenuFlags = MF_BYCOMMAND | MF_ENABLED;
@@ -536,6 +545,16 @@ FrameWndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
    case FS_REBUILDDOCSTRING:
 
       BuildDocumentStringWorker();
+      break;
+
+   case FS_UPDATECHECKED:
+
+      UpdateOnChecked(lParam);
+      break;
+
+   case FS_UPDATEDOWNLOADED:
+
+      UpdateOnDownloaded(lParam);
       break;
 
    case FS_UPDATEDRIVETYPECOMPLETE:

@@ -24,6 +24,8 @@
     <ClCompile Include="wfdos.c" />
     <ClCompile Include="wfdrives.c" />
     <ClCompile Include="wfdrop.c" />
+    <ClCompile Include="wffoldersize.c" />
+    <ClCompile Include="wfupdate.c" />
     <ClCompile Include="wfext.c" />
     <ClCompile Include="wffile.c" />
     <ClCompile Include="wfgoto.cpp" />
@@ -52,6 +54,9 @@
     <ClInclude Include="wfdlgs.h" />
     <ClInclude Include="wfdocb.h" />
     <ClInclude Include="wfdrop.h" />
+    <ClInclude Include="wffoldersize.h" />
+    <ClInclude Include="wfupdate.h" />
+    <ClInclude Include="wfupdate_repo.h" />
     <ClInclude Include="wfext.h" />
     <ClInclude Include="wfexti.h" />
     <ClInclude Include="wfgwl.h" />

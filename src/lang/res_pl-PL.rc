@@ -83,6 +83,8 @@ BEGIN
     MENUITEM    "&Sortuj według dat",                    IDM_BYDATE
     MENUITEM    "Sortuj według dat (od najstarszyc&h)",  IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "Pokaż rozmiary &folderów", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "&Według typów plików...",               IDM_VINCLUDE
     END
     POPUP       "&Opcje"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "&Minimalizuj podczas pracy",                 IDM_MINONRUN
     MENUITEM    "Twórz indeks katalogów przy &uruchomieniu",  IDM_INDEXONLAUNCH
+    MENUITEM    "Automatycznie sprawdzaj &aktualizacje", IDM_AUTOUPDATE
     MENUITEM    "Z&apisz ustawienia przy zakończeniu",        IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "Zapisz &ustawienia w tej chwili",            IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "&Pomoc na temat...",                IDM_HELPKEYS
     MENUITEM    "&Korzystanie z Pomocy",             IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "Sprawdź &aktualizacje...", IDM_CHECKUPDATE
     MENUITEM    "Me&nedżer plików - informacje...",  IDM_ABOUT
     END
 

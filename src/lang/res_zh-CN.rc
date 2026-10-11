@@ -83,6 +83,8 @@ BEGIN
     MENUITEM    "按日期排序(&D)",   IDM_BYDATE
     MENUITEM    "按先前日期排序(&F)",   IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "显示文件夹大小(&Z)", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "按文件类型(&T)...",     IDM_VINCLUDE
     END
     POPUP       "选项(&O)"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "自动缩成图标(&M)",     IDM_MINONRUN
     MENUITEM    "在启动时创建“转到目录“索引(&G)", IDM_INDEXONLAUNCH
+    MENUITEM    "自动检查更新(&U)", IDM_AUTOUPDATE
     MENUITEM    "退出时保存设置值(&E)",   IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "Save Settings &Now",       IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "查找帮助主题(&S)...",   IDM_HELPKEYS
     MENUITEM    "帮助使用方法(&H)",         IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "检查更新(&U)...", IDM_CHECKUPDATE
     MENUITEM    "关于文件管理器(&A)...",   IDM_ABOUT
     END
 

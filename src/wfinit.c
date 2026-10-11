@@ -218,6 +218,8 @@ GetSettings()
    /* Get the flags out of the INI file. */
    bMinOnRun            = GetPrivateProfileInt(szSettings, szMinOnRun,            bMinOnRun,            szTheINIFile);
    bIndexOnLaunch       = GetPrivateProfileInt(szSettings, szIndexOnLaunch,       bIndexOnLaunch,       szTheINIFile);
+   bAutoUpdate          = GetPrivateProfileInt(szSettings, szAutoUpdate,          bAutoUpdate,          szTheINIFile);
+   FolderSizeInit();
    bIndexHiddenSystem   = GetPrivateProfileInt(szSettings, szIndexHiddenSystem,   bIndexHiddenSystem,   szTheINIFile);
    wTextAttribs         = (WORD)GetPrivateProfileInt(szSettings, szLowerCase,     wTextAttribs,         szTheINIFile);
    bStatusBar           = GetPrivateProfileInt(szSettings, szStatusBar,           bStatusBar,           szTheINIFile);
@@ -381,6 +383,8 @@ InitMenus()
       CheckMenuItem(hMenu, IDM_MINONRUN,  MF_BYCOMMAND | MF_CHECKED);
    if (bIndexOnLaunch)
       CheckMenuItem(hMenu, IDM_INDEXONLAUNCH, MF_BYCOMMAND | MF_CHECKED);
+   if (bAutoUpdate)
+      CheckMenuItem(hMenu, IDM_AUTOUPDATE, MF_BYCOMMAND | MF_CHECKED);
 
    if (bSaveSettings)
       CheckMenuItem(hMenu, IDM_SAVESETTINGS,  MF_BYCOMMAND | MF_CHECKED);
@@ -1637,6 +1641,8 @@ JAPANEND
    {
       StartBuildingDirectoryTrie();
    }
+
+   AutoUpdateInit();
 
    return TRUE;
 }

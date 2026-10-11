@@ -22,7 +22,7 @@
       <PreprocessorDefinitions>LFN;FASTMOVE;UNICODE;_UNICODE;USELASTDOT;MEMDOUBLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>kernel32.lib;gdi32.lib;user32.lib;advapi32.lib;oleaut32.lib;ole32.lib;shell32.lib;shlwapi.lib;comctl32.lib;version.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;gdi32.lib;user32.lib;advapi32.lib;oleaut32.lib;ole32.lib;shell32.lib;shlwapi.lib;comctl32.lib;version.lib;winhttp.lib;bcrypt.lib</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <StackReserveSize>15000000</StackReserveSize>
     </Link>
@@ -146,12 +146,15 @@
     <ClInclude Include="wfdlgs.h" />
     <ClInclude Include="wfdocb.h" />
     <ClInclude Include="wfdrop.h" />
+    <ClInclude Include="wffoldersize.h" />
     <ClInclude Include="wfext.h" />
     <ClInclude Include="wfexti.h" />
     <ClInclude Include="wfgwl.h" />
     <ClInclude Include="wfhelp.h" />
     <ClInclude Include="wfinfo.h" />
     <ClInclude Include="wfmem.h" />
+    <ClInclude Include="wfupdate.h" />
+    <ClInclude Include="wfupdate_repo.h" />
     <ClInclude Include="winexp.h" />
     <ClInclude Include="winfile.h" />
     <ClInclude Include="wnetcaps.h" />
@@ -219,6 +222,7 @@
     <ClCompile Include="wfdos.c" />
     <ClCompile Include="wfdrives.c" />
     <ClCompile Include="wfdrop.c" />
+    <ClCompile Include="wffoldersize.c" />
     <ClCompile Include="wfext.c" />
     <ClCompile Include="wffile.c" />
     <ClCompile Include="wfgoto.cpp" />
@@ -229,6 +233,7 @@
     <ClCompile Include="wfprint.c" />
     <ClCompile Include="wfsearch.c" />
     <ClCompile Include="wftree.c" />
+    <ClCompile Include="wfupdate.c" />
     <ClCompile Include="wfutil.c" />
     <ClCompile Include="winfile.c" />
     <ClCompile Include="wnetcaps.c" />

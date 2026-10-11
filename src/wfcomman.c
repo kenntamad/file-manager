@@ -2053,6 +2053,11 @@ ChangeDisplay:
        WritePrivateProfileBool(szIndexOnLaunch, bIndexOnLaunch);
        goto CHECK_OPTION;
 
+    case IDM_AUTOUPDATE:
+       bTemp = bAutoUpdate = !bAutoUpdate;
+       WritePrivateProfileBool(szAutoUpdate, bAutoUpdate);
+       goto CHECK_OPTION;
+
 CHECK_OPTION:
        //
        // Check/Uncheck the menu item.
@@ -2160,6 +2165,14 @@ ACPCallHelp:
 
     case IDM_ABOUT:
        DialogBox(hAppInstance, (LPTSTR)MAKEINTRESOURCE(ABOUTDLG), hwndFrame, AboutDlgProc);
+       break;
+
+    case IDM_CHECKUPDATE:
+       UpdateCheck(TRUE);
+       break;
+
+    case IDM_FOLDERSIZES:
+       FolderSizeToggle();
        break;
 
     case IDM_DRIVESMORE:

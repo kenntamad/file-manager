@@ -83,6 +83,8 @@ BEGIN
     MENUITEM "날짜 내림차순(&D)",   IDM_BYDATE
     MENUITEM "날짜 오름차순(&F)",   IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "폴더 크기 표시(&Z)", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "파일 형식별(&T)...",     IDM_VINCLUDE
     END
     POPUP       "옵션(&O)"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "파일 실행 시 최소화(&M)",     IDM_MINONRUN
     MENUITEM    "실행 시 디렉터리 이동 색인 만들기(&G)", IDM_INDEXONLAUNCH
+    MENUITEM    "자동으로 업데이트 확인(&U)", IDM_AUTOUPDATE
     MENUITEM    "종료 시 설정 저장(&E)",   IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "설정 저장(&N)",       IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "찾기(&S)...",   IDM_HELPKEYS
     MENUITEM    "도움말 사용법(&H)",         IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "업데이트 확인(&U)...", IDM_CHECKUPDATE
     MENUITEM    "파일 관리자 정보(&A)...",   IDM_ABOUT
     END
 

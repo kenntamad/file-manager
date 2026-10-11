@@ -83,6 +83,8 @@ BEGIN
     MENUITEM "&Ordenar por Data",   IDM_BYDATE
     MENUITEM "Ordenar por Data De&scendente",   IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "Mostrar &Tamanhos das Pastas", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "&Por Tipo de Ficheiro...",     IDM_VINCLUDE
     END
     POPUP       "&Opções"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "Executar &Minimizado",     IDM_MINONRUN
     MENUITEM    "Criar &Index 'Ir para' ao Ligar", IDM_INDEXONLAUNCH
+    MENUITEM    "Procurar Atuali&zações Automaticamente", IDM_AUTOUPDATE
     MENUITEM    "&Guardar Definições ao Sair",   IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "Guardar &Definições Agora",       IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "&Procurar por Ajuda em...",   IDM_HELPKEYS
     MENUITEM    "&Como Usar a Ajuda",         IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "Procurar Atuali&zações...", IDM_CHECKUPDATE
     MENUITEM    "&Acerca do Gestor de Ficheiros...",   IDM_ABOUT
     END
 

@@ -31,6 +31,7 @@
 #define ATTR_COPIED       0x400 /* we have copied this file */
 #define ATTR_DELSRC       0x800 /* delete the source when done */
 
+#ifndef RC_INVOKED
 typedef struct _copyroot {
 #ifdef FASTMOVE
    BOOL    fRecurse  : 1;
@@ -57,4 +58,5 @@ UINT RemoveLast(LPTSTR pFile);
 VOID Notify(HWND,WORD,LPTSTR,LPTSTR);
 
 LPTSTR FindFileName(LPTSTR pPath);
+#endif // RC_INVOKED
 

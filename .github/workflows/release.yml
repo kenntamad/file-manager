@@ -1,0 +1,98 @@
+# Builds File Manager and publishes a GitHub Release when a version tag is pushed.
+#
+#   git tag v10.5.0
+#   git push origin v10.5.0
+#
+# Every published build checks this repository's Releases for updates, so
+# pushing a new tag is all it takes to ship an update to existing installs.
+# The tag must be a higher version than the previous one (v10.5.0 > v10.4.1).
+
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 10.5.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - platform: x64
+            asset: winfile-x64.exe
+          - platform: Win32
+            asset: winfile-x86.exe
+          - platform: ARM64
+            asset: winfile-arm64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Stamp version and update source
+        shell: pwsh
+        run: |
+          $raw = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.version }}' } else { '${{ github.ref_name }}' }
+          $parts = @(($raw -replace '^[^0-9]*', '') -split '[^0-9]+' | Where-Object { $_ -ne '' } | Select-Object -First 4)
+          if ($parts.Count -eq 0) { throw "Tag '$raw' does not contain a version number" }
+          while ($parts.Count -lt 4) { $parts += '0' }
+          $comma = $parts -join ','
+          $dot   = $parts -join '.'
+          Write-Host "Version $dot from $raw"
+
+          $rc = Get-Content src/res.rc -Raw
+          $rc = $rc -replace '(#define VER_FILEVERSION\s+)[0-9,]+',          "`${1}$comma"
+          $rc = $rc -replace '(#define VER_PRODUCTVERSION\s+)[0-9,]+',       "`${1}$comma"
+          $rc = $rc -replace '(#define VER_FILEVERSION_STR\s+)"[^"\\]*',     "`${1}`"$dot"
+          $rc = $rc -replace '(#define VER_PRODUCTVERSION_STR\s+)"[^"\\]*',  "`${1}`"$dot"
+          Set-Content src/res.rc $rc -NoNewline
+
+          # Make this build check this repository for updates
+          "#define WF_UPDATE_REPO L`"${{ github.repository }}`"" | Set-Content src/wfupdate_repo.h
+
+      - name: Build
+        run: msbuild Winfile.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:PlatformToolset=v143
+
+      - name: Collect
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse -Filter winfile.exe | Where-Object { $_.FullName -match '\\${{ matrix.platform }}\\Release\\' } | Select-Object -First 1
+          if (-not $exe) { throw 'winfile.exe not found' }
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item $exe.FullName out/${{ matrix.asset }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: out/${{ matrix.asset }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
+        run: |
+          ls -l dist
+          gh release create "$TAG" dist/*.exe \
+            --repo "${{ github.repository }}" \
+            --title "File Manager $TAG" \
+            --generate-notes \
+            --target "${{ github.sha }}"

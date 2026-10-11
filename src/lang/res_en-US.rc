@@ -83,6 +83,8 @@ BEGIN
     MENUITEM "Sort by &Date",   IDM_BYDATE
     MENUITEM "Sort &forward Date",   IDM_BYFDATE
     MENUITEM    SEPARATOR
+    MENUITEM    "S&how Folder Sizes", IDM_FOLDERSIZES
+    MENUITEM    SEPARATOR
     MENUITEM    "By File &Type...",     IDM_VINCLUDE
     END
     POPUP       "&Options"
@@ -98,6 +100,7 @@ BEGIN
     MENUITEM    SEPARATOR
     MENUITEM    "&Minimize on Use",     IDM_MINONRUN
     MENUITEM    "Create &Goto Index on Launch", IDM_INDEXONLAUNCH
+    MENUITEM    "Check for Updates &Automatically", IDM_AUTOUPDATE
     MENUITEM    "Save Settings on &Exit",   IDM_SAVESETTINGS
     MENUITEM    SEPARATOR
     MENUITEM    "Save Settings &Now",       IDM_SAVENOW
@@ -123,6 +126,7 @@ BEGIN
     MENUITEM    "&Search for Help on...",   IDM_HELPKEYS
     MENUITEM    "&How to Use Help",         IDM_HELPHELP
     MENUITEM    SEPARATOR
+    MENUITEM    "Check for &Updates...", IDM_CHECKUPDATE
     MENUITEM    "&About File Manager...",   IDM_ABOUT
     END
 
@@ -594,6 +598,7 @@ BEGIN
     MH_MYITEMS+IDM_BYDATE,      "Sorts files by date"
     MH_MYITEMS+IDM_BYFDATE,     "Sorts files by forward date"
     MH_MYITEMS+IDM_VINCLUDE,    "Shows files of a specified type"
+    MH_MYITEMS+IDM_FOLDERSIZES, "Shows the total size of each folder's contents"
 
     MH_MYITEMS+IDM_CONFIRM,     "Controls confirmation messages"
     MH_MYITEMS+IDM_FONT,        "Changes the File Manager font"
@@ -607,6 +612,7 @@ BEGIN
     MH_MYITEMS+IDM_MINONRUN,    "Reduces File Manager to an icon at startup"
     MH_MYITEMS + IDM_INDEXONLAUNCH, "Creates an index for Goto Directory when File Manager launches"
     MH_MYITEMS+IDM_SAVESETTINGS,        "Saves settings when you quit File Manager"
+    MH_MYITEMS+IDM_AUTOUPDATE,  "Checks for a newer version of File Manager once a day"
 
     MH_MYITEMS+IDM_NEWWINDOW,   "Opens a new window"
     MH_MYITEMS+IDM_CASCADE,     "Cascades windows"
@@ -622,6 +628,7 @@ BEGIN
     MH_MYITEMS+IDM_HELPINDEX,   "Displays contents for File Manager Help"
     MH_MYITEMS+IDM_HELPKEYS,    "Searches for a topic in File Manager Help"
     MH_MYITEMS+IDM_HELPHELP,    "Displays information about using Help"
+    MH_MYITEMS+IDM_CHECKUPDATE, "Checks for a newer version of File Manager now"
     MH_MYITEMS+IDM_ABOUT,       "Displays information about File Manager"
 END
 

@@ -1485,3 +1485,6 @@ Extern INT nCopyMaxQueue;
 #undef Extern
 #undef EQ
 
+#include "wffoldersize.h"
+#include "wfupdate.h"
+

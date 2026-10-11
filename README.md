@@ -1,8 +1,58 @@
+# ![icon](winfile.png) File Manager
 
+A personal fork of [Microsoft's Windows File Manager (WinFile)](https://github.com/microsoft/winfile)
+with two additions:
 
-# Announcement: Repository to be archived on March 1, 2025
-We realize this may come as a shock and disappointment to our contributors but we simply do not have the expertise or resources within the organization to continue to maintain this project. 
-While you may continue to work on your own private fork, remember that use of archived repositories are more risky from a security standpoint and caution should be taken. 
+## Folder sizes
+
+Folders show the **total size of everything inside them** in the Size column
+(View > All File Details or Partial Details) instead of `<DIR>`.
+
+- Sizes are calculated in the background, so browsing stays responsive; a folder
+  shows `<DIR>` until its total is ready.
+- The status bar totals and *Sort by Size* include folder totals.
+- File > Properties on a folder shows its total size.
+- Junctions and symbolic links are not followed, so nothing is counted twice.
+- Turn it on or off with **View > Show Folder Sizes** (on by default; saved as
+  `FolderSizes=` in winfile.ini).
+
+## Automatic updates
+
+File Manager checks this repository's GitHub Releases once a day at startup. When a
+newer version is published it asks before downloading, verifies the download
+(size, executable header and GitHub's SHA-256 digest), swaps it in and restarts.
+
+- **Options > Check for Updates Automatically** turns the daily check on or off.
+- **Help > Check for Updates...** checks right away.
+- Declining an automatic prompt skips that version until you check manually.
+
+### Publishing an update
+
+Push a version tag that is higher than the current one:
+
+```
+git tag v10.5.0
+git push origin v10.5.0
+```
+
+The `Release` workflow (.github/workflows/release.yml) builds x64, x86 and ARM64,
+stamps the version from the tag, points the build at this repository for
+updates, and publishes `winfile-x64.exe`, `winfile-x86.exe` and
+`winfile-arm64.exe` to a new release. Installed copies pick it up on their next
+daily check.
+
+Builds made outside the workflow don't know where to look for updates. Set the
+repository in `src/wfupdate_repo.h`, or add `UpdateRepo=owner/repository` under
+`[Settings]` in winfile.ini.
+
+## Building
+
+- Visual Studio: open `Winfile.sln` and build.
+- MinGW / llvm-mingw: `make` (see `GNUmakefile`).
+
+---
+
+## Original README
 
 # ![icon](winfile.png) Windows File Manager (WinFile)
 

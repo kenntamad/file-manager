@@ -364,6 +364,12 @@ CreateLBLine(DWORD dwLineFormat, LPXDTA lpxdta, LPWSTR szBuffer)
               lstrcpy(pch, TEXT("<JUNCTION>"));
           else if (dwAttr & ATTR_SYMBOLIC)
               lstrcpy(pch, TEXT("<SYMLINKD>"));
+          else if (FolderSizeIsKnown(lpxdta))
+          {
+              // total size of everything inside the folder
+              pch += PutSize(&lpxdta->qFileSize, pch);
+              *pch = CHAR_NULL;
+          }
           else
               lstrcpy(pch, TEXT("<DIR>"));
         pch += lstrlen(pch);
@@ -458,6 +464,14 @@ DirWndProc(
    hwndLB = GetDlgItem(hwnd, IDCW_LISTBOX);
 
    switch (uMsg) {
+
+   case FS_FOLDERSIZESTART:
+      FolderSizeStart(hwnd);
+      break;
+
+   case FS_FOLDERSIZERESULT:
+      FolderSizeOnResult(hwnd, wParam, lParam);
+      break;
 
    case FS_DIRREADDONE:
    {
@@ -584,6 +598,11 @@ DirWndProc(
    {
       HANDLE hMem;
       HWND hwndTree;
+
+      //
+      // Stop any folder size calculation for this window
+      //
+      FolderSizeCancel(hwnd);
 
       //
       // Remove from Change Notify Loop
@@ -2201,7 +2220,7 @@ FixTabsAndThings(
    //
    if (dwViewOpts & VIEW_SIZE)
    {
-      GetTextExtentPoint32(hdc, TEXT("999,999,999,999"), 15, &size);
+      GetTextExtentPoint32(hdc, TEXT("9,999,999,999,999"), 17, &size);
       i += size.cx + dxText;
       *pwTabs++ = (WORD)i;  // Size
    }
@@ -2492,6 +2511,12 @@ Error:
                         (WPARAM)-1,
                         (LPARAM)lpHead->alpxdtaSorted[i]);
          }
+
+         //
+         // Compute folder totals in the background. Posted because this
+         // function may run on the directory read thread.
+         //
+         FolderSizeRequest(hwndDir);
       }
    }
 }
@@ -2585,6 +2610,16 @@ CompareDTA(
       }
 
    case IDD_SIZE:
+
+      if ((lpItem1->dwAttrs & ATTR_DIR) &&
+          (FolderSizeOfItem(lpItem1) != lpItem1->qFileSize.QuadPart ||
+           FolderSizeOfItem(lpItem2) != lpItem2->qFileSize.QuadPart)) {
+
+         //
+         // folder sizes hidden or not known yet: sort these folders by name
+         //
+         goto CompareNames;
+      }
 
       if (lpItem1->qFileSize.HighPart == lpItem2->qFileSize.HighPart) {
          if (lpItem1->qFileSize.LowPart > lpItem2->qFileSize.LowPart)
@@ -3255,6 +3290,7 @@ GetDirSelData(
    lpHead = MemLinkToHead(lpStart);
 
    *pqTotalSize = lpHead->qTotalSize;
+   (*pqTotalSize).QuadPart += FolderSizeListingTotal(lpStart);
    *piTotalCount = (INT)lpHead->dwTotalCount;
 
    iMac = (INT) SendMessage(hwndLB, LB_GETSELCOUNT, 0, 0L);
@@ -3282,7 +3318,7 @@ GetDirSelData(
       (*piSelCount)++;
 
 
-      (*pqSelSize).QuadPart = (*pqSelSize).QuadPart + (lpxdta->qFileSize).QuadPart;
+      (*pqSelSize).QuadPart = (*pqSelSize).QuadPart + FolderSizeOfItem(lpxdta);
       *ppftLastWrite = &(lpxdta->ftLastWriteTime);
 
       *pisDir = (lpxdta->dwAttrs & ATTR_DIR) != 0;
