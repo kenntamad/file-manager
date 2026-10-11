@@ -25,6 +25,7 @@ jobs:
   build:
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: x64
@@ -61,7 +62,17 @@ jobs:
           "#define WF_UPDATE_REPO L`"${{ github.repository }}`"" | Set-Content src/wfupdate_repo.h
 
       - name: Build
-        run: msbuild Winfile.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:PlatformToolset=v143
+        run: msbuild Winfile.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:PlatformToolset=v143 /flp:logfile=msbuild.log;verbosity=normal
+
+      - name: Report build errors
+        if: failure()
+        shell: pwsh
+        run: |
+          if (Test-Path msbuild.log) {
+            Select-String -Path msbuild.log -Pattern ': (fatal )?error ' | Select-Object -First 20 | ForEach-Object {
+              Write-Host "::error::$($_.Line.Trim())"
+            }
+          }
 
       - name: Collect
         shell: pwsh
@@ -81,6 +92,8 @@ jobs:
 
   release:
     needs: build
+    # publish even if a less common platform failed, as long as x64 built
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -94,6 +107,7 @@ jobs:
           TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
         run: |
           ls -l dist
+          test -f dist/winfile-x64.exe || { echo "::error::x64 build missing"; exit 1; }
           gh release create "$TAG" dist/*.exe dist/*.sha256 \
             --repo "${{ github.repository }}" \
             --title "File Manager $TAG" \
