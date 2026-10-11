@@ -1410,7 +1410,7 @@ Extern UINT wBrowseMessage;
 // to null before the dir window is called again.
 //
 Extern LPWSTR pszInitialDirSel;
-Extern DWORD dwNewView         EQ( VIEW_NAMEONLY );
+Extern DWORD dwNewView         EQ( VIEW_EVERYTHING );
 Extern DWORD dwNewSort         EQ( IDD_NAME );
 Extern DWORD dwNewAttribs    EQ( ATTR_DEFAULT );
 

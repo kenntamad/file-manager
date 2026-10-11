@@ -13,4 +13,4 @@
 
 ********************************************************************/
 
-#define WF_UPDATE_REPO L""
+#define WF_UPDATE_REPO L"kenntamad/file-manager"

@@ -675,7 +675,7 @@ GetSavedWindow(
    pwin->pt.x = pwin->pt.y = pwin->rc.top = pwin->rc.bottom = 0;
    pwin->sw = SW_SHOWNORMAL;
    pwin->dwSort = IDD_NAME;
-   pwin->dwView = VIEW_NAMEONLY;
+   pwin->dwView = VIEW_EVERYTHING;
    pwin->dwAttribs = ATTR_DEFAULT;
    pwin->nSplit = 0;
 
