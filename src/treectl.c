@@ -1735,6 +1735,42 @@ TCWP_DrawItem(
                       y-(dyText/2), ETO_OPAQUE, &rc,
                       szPath, len, NULL);
 
+      //
+      // Total size of the folder, in grey after its name. Drive roots
+      // are skipped (the status bar shows drive usage), as are links.
+      //
+      {
+         RECT rcSize = lpLBItem->rcItem;
+         COLORREF rgbOldText = GetTextColor(hdc);
+         COLORREF rgbOldBk = SetBkColor(hdc, GetSysColor(COLOR_WINDOW));
+         WCHAR szSize[64];
+         INT cchSize = 0;
+
+         rcSize.left = rc.right;
+
+         if (pNode->pParent && !(pNode->dwAttribs & (ATTR_SYMBOLIC | ATTR_JUNCTION))) {
+
+            WCHAR szFull[MAXPATHLEN * 2];
+            LARGE_INTEGER qSize;
+
+            GetTreePath(pNode, szFull);
+            StripBackslash(szFull);
+
+            if (TreeSizeGet(szFull, &qSize)) {
+               szSize[0] = L' ';
+               szSize[1] = L' ';
+               if (StrFormatByteSizeW(qSize.QuadPart, szSize + 2, COUNTOF(szSize) - 2))
+                  cchSize = lstrlen(szSize);
+            }
+         }
+
+         SetTextColor(hdc, GetSysColor(COLOR_GRAYTEXT));
+         ExtTextOut(hdc, rcSize.left + dyBorderx2, y-(dyText/2), ETO_OPAQUE, &rcSize,
+                    szSize, cchSize, NULL);
+         SetTextColor(hdc, rgbOldText);
+         SetBkColor(hdc, rgbOldBk);
+      }
+
       // draw the bitmaps as needed
 
       // HACK: Don't draw the bitmap when moving

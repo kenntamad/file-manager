@@ -17,6 +17,7 @@
 //
 #define FS_FOLDERSIZESTART   (WM_APP + 0x210)  // begin (re)computing sizes for the current listing
 #define FS_FOLDERSIZERESULT  (WM_APP + 0x211)  // wParam = job generation, lParam = PFSRESULT or NULL when done
+#define FS_TREESIZERESULT    (WM_APP + 0x212)  // to the frame window, lParam = batch of tree results
 
 //
 // Values for XDTA.bySizeState (directories only)
@@ -49,5 +50,14 @@ LONGLONG FolderSizeListingTotal(LPXDTALINK lpStart);
 // Returns FALSE if cancelled. Reparse points (junctions, symlinks) are not
 // followed, so nothing is counted twice and link cycles are impossible.
 BOOL     FolderSizeCompute(LPCWSTR pszPath, PLARGE_INTEGER pqSize, volatile LONG* pfCancel);
+
+// Tree (left pane). TreeSizeGet returns the cached size of a folder, or
+// FALSE and queues a background calculation. Results arrive at the frame
+// window as FS_TREESIZERESULT -> TreeSizeOnResult.
+BOOL     TreeSizeGet(LPCWSTR pszPath, PLARGE_INTEGER pqSize);
+VOID     TreeSizeOnResult(LPARAM lParam);
+
+// Forget all known sizes (Window > Refresh)
+VOID     FolderSizeFlush(VOID);
 
 #endif // _WFFOLDERSIZE_H

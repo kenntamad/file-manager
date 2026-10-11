@@ -31,6 +31,9 @@ BOOL  bFolderSizes      = TRUE;
 WCHAR szFolderSizes[]   = L"FolderSizes";
 
 static const WCHAR szJobProp[] = L"WinfileFolderSizeJob";
+
+static VOID TreeSizeInvalidate(HWND hwndMDIChild);
+static VOID TreeSizeCancelAll(VOID);
 static DWORD dwNextGen = 1;
 
 typedef struct _FSJOB {
@@ -108,7 +111,7 @@ static BOOL
 CacheLookup(LPCWSTR pszPath, LONGLONG* pqSize)
 {
    PFSCACHE p = CacheFind(pszPath, CacheHash(pszPath));
-   if (!p)
+   if (!p || p->qSize < 0)          // missing, or only queued by the tree
       return FALSE;
    *pqSize = p->qSize;
    return TRUE;
@@ -620,6 +623,7 @@ FolderSizeOnResult(HWND hwndDir, WPARAM wParam, LPARAM lParam)
    LocalFree(pRes);
 
    UpdateStatus(hwndParent);
+   TreeSizeInvalidate(hwndParent);
 }
 
 VOID
@@ -636,10 +640,14 @@ FolderSizeToggle(VOID)
    bFolderSizes = !bFolderSizes;
    WritePrivateProfileBool(szFolderSizes, bFolderSizes);
 
+   TreeSizeCancelAll();
+
    for (hwnd = GetWindow(hwndMDIClient, GW_CHILD); hwnd; hwnd = GetWindow(hwnd, GW_HWNDNEXT)) {
 
       HWND hwndDir = HasDirWindow(hwnd);
       HWND hwndLB;
+
+      TreeSizeInvalidate(hwnd);
 
       if (!hwndDir)
          continue;
@@ -654,4 +662,384 @@ FolderSizeToggle(VOID)
 
       UpdateStatus(hwnd);
    }
+}
+
+
+/////////////////////////////////////////////////////////////////////
+//
+// Folder sizes in the tree (left pane)
+//
+// The tree asks for the size of each folder as it draws it. Requests go
+// on a LIFO queue (most recently drawn = most likely visible first) that
+// one background thread works through. Each walk also reports the sizes
+// of sub-folders up to TREE_REPORT_DEPTH levels down, so expanding a
+// branch usually shows its sizes immediately. Results land in the same
+// path cache the directory window uses.
+//
+/////////////////////////////////////////////////////////////////////
+
+#define TREE_REPORT_DEPTH    2
+#define TREE_MAX_RESULTS     4096
+#define PENDING_SIZE         ((LONGLONG)-1)
+
+typedef struct _TREERES {
+   struct _TREERES* next;
+   LONGLONG qSize;
+   WCHAR    szPath[1];
+} TREERES, *PTREERES;
+
+typedef struct _TREEBATCH {
+   DWORD    dwGen;
+   PTREERES pFirst;
+} TREEBATCH, *PTREEBATCH;
+
+static CRITICAL_SECTION csTree;
+static BOOL     bTreeInit;
+static HANDLE   hTreeEvent;
+static LPWSTR*  apszTreeQueue;
+static UINT     cTreeQueue, cTreeQueueMax;
+static volatile LONG dwTreeGen = 1;
+
+static VOID
+TreeSizeInvalidate(HWND hwndMDIChild)
+{
+   HWND hwndTree = HasTreeWindow(hwndMDIChild);
+   HWND hwndLB;
+
+   if (hwndTree && (hwndLB = GetDlgItem(hwndTree, IDCW_TREELISTBOX)))
+      InvalidateRect(hwndLB, NULL, FALSE);
+}
+
+static VOID
+TreeSizeInvalidateAll(VOID)
+{
+   HWND hwnd;
+   for (hwnd = GetWindow(hwndMDIClient, GW_CHILD); hwnd; hwnd = GetWindow(hwnd, GW_HWNDNEXT))
+      TreeSizeInvalidate(hwnd);
+}
+
+// Turn "\\?\C:\x" / "\\?\UNC\srv\share\x" back into the normal form used as cache key.
+static VOID
+TreeKeyFromLong(LPCWSTR pszLong, LPWSTR pszKey, DWORD cch)
+{
+   if (!StrCmpNIW(pszLong, L"\\\\?\\UNC\\", 8)) {
+      StringCchPrintfW(pszKey, cch, L"\\\\%s", pszLong + 8);
+   } else if (!StrCmpNW(pszLong, L"\\\\?\\", 4)) {
+      StringCchCopyW(pszKey, cch, pszLong + 4);
+   } else {
+      StringCchCopyW(pszKey, cch, pszLong);
+   }
+}
+
+typedef struct _TREEWALK {
+   WCHAR    szPath[32800];     // \\?\ long path being walked
+   PTREERES pFirst;
+   UINT     cResults;
+   DWORD    dwGen;
+} TREEWALK;
+
+static LONGLONG
+TreeWalk(TREEWALK* pw, SIZE_T cch, INT depth)
+{
+   WIN32_FIND_DATAW fd;
+   HANDLE hFind;
+   LONGLONG qTotal = 0;
+
+   if (cch + 3 >= COUNTOF(pw->szPath))
+      return 0;
+
+   if (pw->szPath[cch - 1] != L'\\')
+      pw->szPath[cch++] = L'\\';
+   pw->szPath[cch] = L'*';
+   pw->szPath[cch + 1] = CHAR_NULL;
+
+   hFind = FindFirstFast(pw->szPath, &fd);
+   pw->szPath[cch] = CHAR_NULL;
+
+   if (hFind != INVALID_HANDLE_VALUE) {
+      do {
+         if ((DWORD)dwTreeGen != pw->dwGen)
+            break;
+
+         if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+
+            SIZE_T cchName;
+
+            if (fd.cFileName[0] == L'.' &&
+                (fd.cFileName[1] == CHAR_NULL ||
+                 (fd.cFileName[1] == L'.' && fd.cFileName[2] == CHAR_NULL)))
+               continue;
+
+            if (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+               continue;
+
+            cchName = lstrlenW(fd.cFileName);
+            if (cch + cchName + 2 >= COUNTOF(pw->szPath))
+               continue;
+
+            lstrcpyW(pw->szPath + cch, fd.cFileName);
+            qTotal += TreeWalk(pw, cch + cchName, depth + 1);
+            pw->szPath[cch] = CHAR_NULL;
+
+         } else {
+            ULARGE_INTEGER q;
+            q.LowPart = fd.nFileSizeLow;
+            q.HighPart = fd.nFileSizeHigh;
+            qTotal += (LONGLONG)q.QuadPart;
+         }
+      } while (FindNextFileW(hFind, &fd));
+
+      FindClose(hFind);
+   }
+
+   //
+   // Report this folder (strip the trailing backslash we added).
+   //
+   if (depth <= TREE_REPORT_DEPTH && (depth == 0 || pw->cResults < TREE_MAX_RESULTS) &&
+       (DWORD)dwTreeGen == pw->dwGen) {
+
+      WCHAR szKey[MAXPATHLEN * 2];
+      PTREERES pRes;
+      SIZE_T cchKey;
+
+      if (cch && pw->szPath[cch - 1] == L'\\')
+         pw->szPath[cch - 1] = CHAR_NULL;
+
+      TreeKeyFromLong(pw->szPath, szKey, COUNTOF(szKey));
+      cchKey = lstrlenW(szKey);
+
+      pRes = (PTREERES)LocalAlloc(LMEM_FIXED, sizeof(TREERES) + cchKey * sizeof(WCHAR));
+      if (pRes) {
+         pRes->qSize = qTotal;
+         lstrcpyW(pRes->szPath, szKey);
+         pRes->next = pw->pFirst;
+         pw->pFirst = pRes;
+         pw->cResults++;
+      }
+
+      if (cch)
+         pw->szPath[cch - 1] = L'\\';
+   }
+
+   if (cch && pw->szPath[cch - 1] == L'\\')
+      pw->szPath[cch - 1] = CHAR_NULL;
+
+   return qTotal;
+}
+
+static VOID
+FreeTreeResults(PTREERES p)
+{
+   while (p) {
+      PTREERES pNext = p->next;
+      LocalFree(p);
+      p = pNext;
+   }
+}
+
+static DWORD WINAPI
+TreeSizeThread(LPVOID lpParam)
+{
+   TREEWALK* pw = (TREEWALK*)LocalAlloc(LMEM_FIXED, sizeof(TREEWALK));
+
+   UNREFERENCED_PARAMETER(lpParam);
+
+   if (!pw)
+      return 0;
+
+   SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
+
+   for (;;) {
+
+      LPWSTR pszPath = NULL;
+      PTREEBATCH pBatch;
+      SIZE_T cch;
+
+      EnterCriticalSection(&csTree);
+      if (cTreeQueue)
+         pszPath = apszTreeQueue[--cTreeQueue];
+      pw->dwGen = (DWORD)dwTreeGen;
+      LeaveCriticalSection(&csTree);
+
+      if (!pszPath) {
+         WaitForSingleObject(hTreeEvent, INFINITE);
+         continue;
+      }
+
+      if (pszPath[0] == L'\\' && pszPath[1] == L'\\')
+         StringCchPrintfW(pw->szPath, COUNTOF(pw->szPath), L"\\\\?\\UNC\\%s", pszPath + 2);
+      else
+         StringCchPrintfW(pw->szPath, COUNTOF(pw->szPath), L"\\\\?\\%s", pszPath);
+      LocalFree(pszPath);
+
+      pw->pFirst = NULL;
+      pw->cResults = 0;
+
+      cch = lstrlenW(pw->szPath);
+      while (cch > 7 && pw->szPath[cch - 1] == L'\\')
+         pw->szPath[--cch] = CHAR_NULL;
+
+      TreeWalk(pw, cch, 0);
+
+      if ((DWORD)dwTreeGen != pw->dwGen || !pw->pFirst) {
+         FreeTreeResults(pw->pFirst);
+         continue;
+      }
+
+      pBatch = (PTREEBATCH)LocalAlloc(LMEM_FIXED, sizeof(TREEBATCH));
+      if (!pBatch) {
+         FreeTreeResults(pw->pFirst);
+         continue;
+      }
+      pBatch->dwGen = pw->dwGen;
+      pBatch->pFirst = pw->pFirst;
+
+      if (!PostMessage(hwndFrame, FS_TREESIZERESULT, 0, (LPARAM)pBatch)) {
+         FreeTreeResults(pBatch->pFirst);
+         LocalFree(pBatch);
+      }
+   }
+}
+
+static BOOL
+TreeSizeEnsureThread(VOID)
+{
+   HANDLE hThread;
+
+   if (bTreeInit)
+      return TRUE;
+
+   InitializeCriticalSection(&csTree);
+   hTreeEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+   if (!hTreeEvent)
+      return FALSE;
+
+   // deep folder trees recurse; reserve a generous stack
+   hThread = CreateThread(NULL, 8 * 1024 * 1024, TreeSizeThread, NULL,
+                          STACK_SIZE_PARAM_IS_A_RESERVATION, NULL);
+   if (!hThread)
+      return FALSE;
+
+   CloseHandle(hThread);
+   bTreeInit = TRUE;
+   return TRUE;
+}
+
+static VOID
+TreeSizeCancelAll(VOID)
+{
+   UINT i;
+
+   InterlockedIncrement(&dwTreeGen);
+
+   if (!bTreeInit)
+      return;
+
+   EnterCriticalSection(&csTree);
+   for (i = 0; i < cTreeQueue; i++)
+      LocalFree(apszTreeQueue[i]);
+   cTreeQueue = 0;
+   LeaveCriticalSection(&csTree);
+
+   // forget the "queued" markers so folders get asked for again
+   {
+      UINT b;
+      for (b = 0; b < CACHE_BUCKETS; b++) {
+         PFSCACHE* pp = &aCache[b];
+         while (*pp) {
+            if ((*pp)->qSize == PENDING_SIZE) {
+               PFSCACHE p = *pp;
+               *pp = p->next;
+               LocalFree(p);
+               cCache--;
+            } else {
+               pp = &(*pp)->next;
+            }
+         }
+      }
+   }
+}
+
+BOOL
+TreeSizeGet(LPCWSTR pszPath, PLARGE_INTEGER pqSize)
+{
+   PFSCACHE p;
+   DWORD dwHash;
+
+   if (!bFolderSizes || !pszPath[0])
+      return FALSE;
+
+   dwHash = CacheHash(pszPath);
+   p = CacheFind(pszPath, dwHash);
+
+   if (p) {
+      if (p->qSize == PENDING_SIZE)
+         return FALSE;
+      pqSize->QuadPart = p->qSize;
+      return TRUE;
+   }
+
+   //
+   // Not known yet: queue it and remember that we did.
+   //
+   if (!TreeSizeEnsureThread())
+      return FALSE;
+
+   {
+      LPWSTR psz = (LPWSTR)LocalAlloc(LMEM_FIXED, (lstrlenW(pszPath) + 1) * sizeof(WCHAR));
+      if (!psz)
+         return FALSE;
+      lstrcpyW(psz, pszPath);
+
+      EnterCriticalSection(&csTree);
+      if (cTreeQueue == cTreeQueueMax) {
+         UINT cNew = cTreeQueueMax ? cTreeQueueMax * 2 : 64;
+         LPWSTR* apNew = (LPWSTR*)LocalAlloc(LMEM_FIXED, cNew * sizeof(LPWSTR));
+         if (!apNew) {
+            LeaveCriticalSection(&csTree);
+            LocalFree(psz);
+            return FALSE;
+         }
+         if (apszTreeQueue) {
+            CopyMemory(apNew, apszTreeQueue, cTreeQueue * sizeof(LPWSTR));
+            LocalFree(apszTreeQueue);
+         }
+         apszTreeQueue = apNew;
+         cTreeQueueMax = cNew;
+      }
+      apszTreeQueue[cTreeQueue++] = psz;
+      LeaveCriticalSection(&csTree);
+   }
+
+   CacheStore(pszPath, PENDING_SIZE);
+   SetEvent(hTreeEvent);
+   return FALSE;
+}
+
+VOID
+TreeSizeOnResult(LPARAM lParam)
+{
+   PTREEBATCH pBatch = (PTREEBATCH)lParam;
+   PTREERES p;
+
+   if (pBatch->dwGen == (DWORD)dwTreeGen && bFolderSizes) {
+      for (p = pBatch->pFirst; p; p = p->next)
+         CacheStore(p->szPath, p->qSize);
+      TreeSizeInvalidateAll();
+   }
+
+   FreeTreeResults(pBatch->pFirst);
+   LocalFree(pBatch);
+}
+
+VOID
+FolderSizeFlush(VOID)
+{
+   HWND hwnd;
+
+   TreeSizeCancelAll();
+   CacheClear();
+
+   for (hwnd = GetWindow(hwndMDIClient, GW_CHILD); hwnd; hwnd = GetWindow(hwnd, GW_HWNDNEXT))
+      TreeSizeInvalidate(hwnd);
 }

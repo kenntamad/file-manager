@@ -147,6 +147,7 @@
     <ClInclude Include="wfdocb.h" />
     <ClInclude Include="wfdrop.h" />
     <ClInclude Include="wffoldersize.h" />
+    <ClInclude Include="wfcolumns.h" />
     <ClInclude Include="wfext.h" />
     <ClInclude Include="wfexti.h" />
     <ClInclude Include="wfgwl.h" />
@@ -223,6 +224,7 @@
     <ClCompile Include="wfdrives.c" />
     <ClCompile Include="wfdrop.c" />
     <ClCompile Include="wffoldersize.c" />
+    <ClCompile Include="wfcolumns.c" />
     <ClCompile Include="wfext.c" />
     <ClCompile Include="wffile.c" />
     <ClCompile Include="wfgoto.cpp" />

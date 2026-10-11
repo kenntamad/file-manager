@@ -1,7 +1,7 @@
 # ![icon](winfile.png) File Manager
 
 A personal fork of [Microsoft's Windows File Manager (WinFile)](https://github.com/microsoft/winfile)
-with two additions:
+with folder sizes, resizable columns and automatic updates.
 
 ## Folder sizes
 
@@ -13,8 +13,21 @@ Folders show the **total size of everything inside them** in the Size column
 - The status bar totals and *Sort by Size* include folder totals.
 - File > Properties on a folder shows its total size.
 - Junctions and symbolic links are not followed, so nothing is counted twice.
+- The folder tree on the left shows each folder's total in grey next to its name
+  (drive roots are skipped; the status bar shows drive usage).
+- **Window > Refresh** (F5) recalculates all sizes.
 - Turn it on or off with **View > Show Folder Sizes** (on by default; saved as
   `FolderSizes=` in winfile.ini).
+
+## Resizable columns
+
+In the details views the file list has a column header like File Explorer's:
+
+- Drag a divider to resize a column; double-click it to go back to the automatic width.
+- Click Name, Size or Date to sort by that column.
+- Long names are cut off with "..." instead of running into the next column.
+- Widths are remembered (`ColumnWidths=` in winfile.ini).
+- New windows open in **View > All File Details**.
 
 ## Automatic updates
 

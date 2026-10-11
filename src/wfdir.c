@@ -225,6 +225,20 @@ DrawItem(
 
       x += dxFolder + dyBorderx2 + dyBorder;
 
+      if (ColumnsIsDirWindow(hwnd)) {
+
+         //
+         // Directory window: one clipped cell per header column
+         //
+         DirDrawColumns(hDC,
+                        &lpLBItem->rcItem,
+                        x,
+                        szBuf,
+                        (WORD *)GetWindowLongPtr(hwnd, GWL_TABARRAY),
+                        dwViewOpts);
+
+      } else
+
       RightTabbedTextOut(hDC,
                          x,
                          y-(dyText/2),
@@ -468,6 +482,15 @@ DirWndProc(
    case FS_FOLDERSIZESTART:
       FolderSizeStart(hwnd);
       break;
+
+   case FS_HEADERSYNC:
+      DirHeaderSync(hwnd);
+      break;
+
+   case WM_NOTIFY:
+      if (((LPNMHDR)lParam)->idFrom == IDCW_HEADER)
+         return DirHeaderNotify(hwnd, (LPNMHDR)lParam);
+      return DefWindowProc(hwnd, uMsg, wParam, lParam);
 
    case FS_FOLDERSIZERESULT:
       FolderSizeOnResult(hwnd, wParam, lParam);
@@ -969,7 +992,7 @@ DirWndProc(
       if (!IsIconic(hwndParent)) {
          INT iMax;
 
-         MoveWindow(hwndLB, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+         DirLayout(hwnd);     // column header + listbox
 
 
          iMax = (INT)SendMessage(hwndLB, LB_GETCARETINDEX, 0, 0L);
@@ -1113,6 +1136,7 @@ ChangeDisplay(
          DirGetAnchorFocus(hwndLB, lpStart, pSelInfo);
 
          SetWindowLongPtr(hwndListParms, GWL_SORT, LOWORD(lParam));
+         PostMessage(hwnd, FS_HEADERSYNC, 0, 0);     // move the sort arrow
          SendMessage(hwndLB, LB_RESETCONTENT, 0, 0L);
 
          SendMessage(hwndLB, WM_SETREDRAW, FALSE, 0L);
@@ -1418,6 +1442,11 @@ CreateLB:
          lRetval = -1L;
          goto Done;
       }
+
+      //
+      // Show/hide and fill the column header for this view
+      //
+      PostMessage(hwnd, FS_HEADERSYNC, 0, 0);
 
       if (!dwNewAttribs)
          dwNewAttribs = ATTR_DEFAULT;
@@ -2193,10 +2222,19 @@ FixTabsAndThings(
       999
    };
 
+   BOOL bCols;            // directory window: honour user column widths
+   WORD *pwTabsStart = pwTabs;
+
    i = iMaxWidthFileName;  // the widest filename
 
    if (pwTabs == NULL)
       return i;
+
+   bCols = ColumnsIsDirListbox(hwndLB);
+   if (bCols) {
+      i = ColumnsWidth(COL_NAME, iMaxWidthFileName);
+      pwTabsStart[TAB_NAMEWIDTH] = (WORD)i;
+   }
 
    hdc = GetDC(NULL);
    hOld = SelectObject(hdc, hFont);
@@ -2211,8 +2249,8 @@ FixTabsAndThings(
       //
       // We have a 8.3 name to display
       //
-      i += iMaxWidthNTFSFileName + dxText;
-      *pwTabs++ = (WORD)i;  // Size
+      i += bCols ? ColumnsWidth(COL_DOSNAME, iMaxWidthNTFSFileName + dxText) : iMaxWidthNTFSFileName + dxText;
+      *pwTabs++ = (WORD)i;  // Short name
    }
 
    //
@@ -2221,7 +2259,7 @@ FixTabsAndThings(
    if (dwViewOpts & VIEW_SIZE)
    {
       GetTextExtentPoint32(hdc, TEXT("9,999,999,999,999"), 17, &size);
-      i += size.cx + dxText;
+      i += bCols ? ColumnsWidth(COL_SIZE, size.cx + dxText) : size.cx + dxText;
       *pwTabs++ = (WORD)i;  // Size
    }
 
@@ -2237,7 +2275,7 @@ FixTabsAndThings(
       // max date digits
       //
       GetTextExtentPoint32(hdc, szBuf, lstrlen(szBuf), &size);
-      i += size.cx + dxText;
+      i += bCols ? ColumnsWidth(COL_DATE, size.cx + dxText) : size.cx + dxText;
       *pwTabs++ = (WORD)i;  // Date
    }
 
@@ -2249,7 +2287,7 @@ FixTabsAndThings(
       CreateTime(&st, szBuf);
 
       GetTextExtentPoint32(hdc, szBuf, lstrlen(szBuf), &size);
-      i += size.cx + dxText;
+      i += bCols ? ColumnsWidth(COL_TIME, size.cx + dxText) : size.cx + dxText;
       *pwTabs++ = (WORD)i;  // Time
    }
 
@@ -2259,7 +2297,7 @@ FixTabsAndThings(
    if (dwViewOpts & VIEW_FLAGS) {
       PutAttributes(ATTR_ALL, szBuf);
       GetTextExtentPoint32(hdc, szBuf, lstrlen(szBuf), &size);
-      i += size.cx + dxText;
+      i += bCols ? ColumnsWidth(COL_ATTR, size.cx + dxText) : size.cx + dxText;
       *pwTabs++ = (WORD)i;  // Attributes
    }
 
@@ -2272,6 +2310,12 @@ FixTabsAndThings(
                LB_SETHORIZONTALEXTENT,
                i + dxFolder + 4 * dyBorderx2,
                0L);
+
+   //
+   // Update the column header (may be called on the directory read thread)
+   //
+   if (bCols)
+      PostMessage(GetParent(hwndLB), FS_HEADERSYNC, 0, 0);
    //
    // total extent
    //
@@ -3577,3 +3621,38 @@ SetDirFocus(HWND hwndDir)
       return TRUE;
 }
 
+
+
+/////////////////////////////////////////////////////////////////////
+//
+// Name:     DirRecalcColumns
+//
+// Synopsis: Recomputes column positions after the user resized a
+//           column in the header, and redraws the list.
+//
+/////////////////////////////////////////////////////////////////////
+
+VOID
+DirRecalcColumns(HWND hwndDir)
+{
+   HWND hwndLB = GetDlgItem(hwndDir, IDCW_LISTBOX);
+   HWND hwndListParms = (HWND)GetWindowLongPtr(hwndDir, GWL_LISTPARMS);
+   LPXDTALINK lpStart = (LPXDTALINK)GetWindowLongPtr(hwndDir, GWL_HDTA);
+   WORD *pwTabs = (WORD *)GetWindowLongPtr(hwndDir, GWL_TABARRAY);
+   DWORD dwView;
+
+   if (!hwndLB || !hwndListParms || !lpStart || !pwTabs)
+      return;
+
+   dwView = (DWORD)GetWindowLongPtr(hwndListParms, GWL_VIEW);
+   if (!(dwView & VIEW_EVERYTHING))
+      return;
+
+   FixTabsAndThings(hwndLB,
+                    pwTabs,
+                    ColumnsNameIsAuto() ? GetMaxExtent(hwndLB, lpStart, FALSE) : 0,
+                    (dwView & VIEW_DOSNAMES) ? GetMaxExtent(hwndLB, lpStart, TRUE) : 0,
+                    dwView);
+
+   InvalidateRect(hwndLB, NULL, TRUE);
+}

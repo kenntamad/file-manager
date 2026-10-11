@@ -9,6 +9,7 @@ SRCS = \
 	src/treectl.c \
 	src/wfassoc.c \
 	src/wfchgnot.c \
+	src/wfcolumns.c \
 	src/wfcomman.c \
 	src/wfcopy.c \
 	src/wfdir.c \

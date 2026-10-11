@@ -220,6 +220,7 @@ GetSettings()
    bIndexOnLaunch       = GetPrivateProfileInt(szSettings, szIndexOnLaunch,       bIndexOnLaunch,       szTheINIFile);
    bAutoUpdate          = GetPrivateProfileInt(szSettings, szAutoUpdate,          bAutoUpdate,          szTheINIFile);
    FolderSizeInit();
+   ColumnsInit();
    bIndexHiddenSystem   = GetPrivateProfileInt(szSettings, szIndexHiddenSystem,   bIndexHiddenSystem,   szTheINIFile);
    wTextAttribs         = (WORD)GetPrivateProfileInt(szSettings, szLowerCase,     wTextAttribs,         szTheINIFile);
    bStatusBar           = GetPrivateProfileInt(szSettings, szStatusBar,           bStatusBar,           szTheINIFile);

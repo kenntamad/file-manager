@@ -2093,6 +2093,9 @@ CHECK_OPTION:
 #define NUMDRIVES (sizeof(rgiDrive)/sizeof(rgiDrive[0]))
           INT rgiSaveDrives[NUMDRIVES];
 
+          // sizes may have changed anywhere; recompute them
+          FolderSizeFlush();
+
           if (WAITNET_LOADED) {
 
              //

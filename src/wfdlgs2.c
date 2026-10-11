@@ -959,7 +959,7 @@ GetVersionInfo(PTSTR pszPath, PTSTR pszName)
    DWORD cbValueTranslation=0;
    LPTSTR lpszValue=NULL;
 
-   static bDLLFail = FALSE;
+   static BOOL bDLLFail = FALSE;
 
    if (!hVersion) {
 

@@ -1487,4 +1487,5 @@ Extern INT nCopyMaxQueue;
 
 #include "wffoldersize.h"
 #include "wfupdate.h"
+#include "wfcolumns.h"
 

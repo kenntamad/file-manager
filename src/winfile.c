@@ -547,6 +547,11 @@ FrameWndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
       BuildDocumentStringWorker();
       break;
 
+   case FS_TREESIZERESULT:
+
+      TreeSizeOnResult(lParam);
+      break;
+
    case FS_UPDATECHECKED:
 
       UpdateOnChecked(lParam);
